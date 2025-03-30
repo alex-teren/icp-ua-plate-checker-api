@@ -56,7 +56,7 @@ app.post('/check', async (req, res) => {
 
   await page.goto('https://opendata.hsc.gov.ua/check-leisure-license-plates/', {
     waitUntil: 'networkidle2',
-    timeout: 0  // Disable timeout
+    timeout: 60000
   });
 
   let results = [];
@@ -74,17 +74,19 @@ app.post('/check', async (req, res) => {
     await page.type("input#number", plate);
     await page.click('input[type="submit"][value="ПЕРЕГЛЯНУТИ"]');
 
-    await page.waitForSelector("#exampleTable td:first-child");
+    await page.waitForSelector("#exampleTable td:first-child", { timeout: 60000 });
 
     try {
-      const result = await page.$eval("#exampleTable td:first-child", el => el.textContent);
+      const result = await page.$eval("#exampleTable td:first-child", el => el.textContent.trim());
       if (result.includes(plate)) {
         results.push({ region: regionsDict[i], status: "available", message: `Номер ${plate} доступний` });
       } else {
         results.push({ region: regionsDict[i], status: "unavailable", message: `Номер ${plate} НЕ доступний` });
       }
     } catch (error) {
-      results.push({ region: regionsDict[i], status: "error", message: `Помилка: ${error.message}` });
+      await browser.close();
+      console.error('Selector "#exampleTable td:first-child" not found:', error);
+      return res.status(500).json({ error: 'Table did not load in time.' });
     }
 
     await new Promise(resolve => setTimeout(resolve, 300));

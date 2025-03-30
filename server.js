@@ -67,7 +67,7 @@ app.post('/check', async (req, res) => {
     await page.type('input#number', plate);
     await page.click('input[type="submit"][value="ПЕРЕГЛЯНУТИ"]');
 
-    await page.waitForSelector('#exampleTable td:first-child', { timeout: 15000 });
+    await page.waitForSelector('#exampleTable td:first-child', { timeout: 60000 });
     const result = await page.$eval("#exampleTable td:first-child", el => el.textContent.trim());
 
     await browser.close();

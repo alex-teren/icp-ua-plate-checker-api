@@ -1,0 +1,18 @@
+{
+  "name": "ua-plate-checker",
+  "version": "0.0.1",
+  "description": "API that checks the availability of Ukrainian vehicle license plates for various regions. This API scrapes data from the official website to monitor and notify users about plate availability for a specified combination.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "heroku-postbuild": "mkdir ./.cache && mv /app/.cache/puppeteer ./.cache"
+  },
+  "author": "Oleksandr Terentiev",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "puppeteer": "^23.11.1"
+  }
+}

@@ -73,18 +73,27 @@ app.post("/check", async (req, res) => {
     await page.type("input#number", plate);
     await page.click('input[type="submit"][value="ПЕРЕГЛЯНУТИ"]');
 
+    let result;
+
     try {
-      await page.waitForSelector("#exampleTable td:first-child");
-      const result = await page.$eval("#exampleTable td:first-child", (el) =>
-        el.textContent.trim()
-      );
+      await page.waitForSelector('body', { timeout: 10000 });
+
+      const isAbsent = await page.$x("//h4[contains(text(), 'НОМЕРНИЙ ЗНАК З ДАННОЮ КОМБІНАЦІЄЮ ВІДСУТНІЙ')]");
+
+      if (isAbsent.length > 0) {
+        result = `Номер ${plate} НЕ доступний у ${regionsDict[region]}`;
+      } else {
+        await page.waitForSelector('#exampleTable td:first-child', { timeout: 10000 });
+        const tableResult = await page.$eval("#exampleTable td:first-child", el => el.textContent.trim());
+        result = `Номер ${tableResult} доступний у ${regionsDict[region]}`;
+      }
 
       console.log(`✅ Result: ${result}`);
 
       await browser.close();
       res.json({ region, result });
     } catch (error) {
-      console.error("⛔️ Error during selector wait or evaluation:", error);
+      console.error("⛔️ Error during evaluation:", error);
       await browser.close();
       res.status(500).json({ error: error.message });
     }

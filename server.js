@@ -44,14 +44,27 @@ app.post('/check', async (req, res) => {
   const { plate } = req.body;
   if (!plate) return res.status(400).json({ error: 'Plate number required' });
 
-  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  const browser = await puppeteer.launch({ headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu'
+    ]
+  });
   const page = await browser.newPage();
 
-  await page.goto('https://opendata.hsc.gov.ua/check-leisure-license-plates/');
+  await page.goto('https://opendata.hsc.gov.ua/check-leisure-license-plates/', {
+    waitUntil: 'networkidle2',
+    timeout: 0  // Disable timeout
+  });
 
   let results = [];
 
   for (let i = 1; i <= 26; i++) {
+    // Wait for the region selector to be available
+    await page.waitForSelector("select#region", { timeout: 10000 });
+
     await page.select("select#region", i.toString());
     await page.select("select#type_venichle", "light_car_and_truck");
 

@@ -72,25 +72,21 @@ app.post("/check", async (req, res) => {
     await page.type("input#number", plate);
     await page.click('input[type="submit"][value="ПЕРЕГЛЯНУТИ"]');
 
+    await page.waitForSelector("#exampleTable td:first-child");
+
     try {
-      const isPlateAbsent = await page.waitForSelector(
-        'xpath///h4[contains(text(), "НОМЕРНИЙ ЗНАК З ДАННОЮ КОМБІНАЦІЄЮ ВІДСУТНІЙ")]',
-        { timeout: 10000 }
+
+      const result = await page.$eval("#exampleTable td:first-child", (el) =>
+        el.textContent.trim()
       );
-      
-      if (isPlateAbsent) {
+      if (result.includes(plate)) {
+        const resultTable = await page.$eval("#exampleTable", (el) => el.outerHTML);
+        console.log(`✅ Plate ${result} is available in region ${region}`);
+        res.json({ region, available: true, result, resultTable });
+      }
+      else{
         console.log(`❌ Plate ${plate} is NOT available in region ${region}`);
         res.json({ region, available: false, message: "Номер недоступний" });
-      } else {
-        await page.waitForSelector("#exampleTable td:first-child, h4", {
-          timeout: 15000,
-        });
-
-        const result = await page.$eval("#exampleTable td:first-child", (el) =>
-          el.textContent.trim()
-        );
-        console.log(`✅ Plate ${result} is available in region ${region}`);
-        res.json({ region, available: true, result });
       }
     } catch (error) {
       console.error("⛔️ Error during evaluation:", error);

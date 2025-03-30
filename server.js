@@ -1,6 +1,6 @@
-const express = require('express');
-const cors = require('cors');
-const puppeteer = require('puppeteer');
+const express = require("express");
+const cors = require("cors");
+const puppeteer = require("puppeteer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,46 +37,62 @@ const regionsDict = {
 app.use(cors());
 app.use(express.json());
 
-app.post('/check', async (req, res) => {
+app.post("/check", async (req, res) => {
   const { plate, region } = req.body;
   if (!plate || !region) {
-    return res.status(400).json({ error: 'Plate number and region required' });
+    return res.status(400).json({ error: "Plate number and region required" });
   }
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
   });
 
   try {
     const page = await browser.newPage();
-    await page.goto('https://opendata.hsc.gov.ua/check-leisure-license-plates/', {
-      waitUntil: 'networkidle0',
-      timeout: 60000
-    });
+    await page.goto(
+      "https://opendata.hsc.gov.ua/check-leisure-license-plates/",
+      {
+        waitUntil: "networkidle0",
+        timeout: 60000,
+      }
+    );
 
-    await page.waitForSelector('select#region', { timeout: 10000 });
+    await page.waitForSelector("select#region", { timeout: 10000 });
 
-    await page.select('select#region', region.toString());
-    await page.select('select#type_venichle', 'light_car_and_truck');
+    await page.select("select#region", region.toString());
+    await page.select("select#type_venichle", "light_car_and_truck");
 
-    await page.click('input#number', { clickCount: 3 });
-    await page.keyboard.press('Backspace');
-    await page.type('input#number', plate);
+    await page.click("input#number", { clickCount: 3 });
+    await page.keyboard.press("Backspace");
+    await page.type("input#number", plate);
     await page.click('input[type="submit"][value="ПЕРЕГЛЯНУТИ"]');
 
-    await page.waitForSelector('#exampleTable td:first-child', { timeout: 60000 });
-    const result = await page.$eval("#exampleTable td:first-child", el => el.textContent.trim());
+    try {
+      await page.waitForSelector("#exampleTable td:first-child");
+      const result = await page.$eval("#exampleTable td:first-child", (el) =>
+        el.textContent.trim()
+      );
 
-    await browser.close();
+      console.log(`✅ Result: ${result}`);
 
-    res.json({ region, result });
+      await browser.close();
+      res.json({ region, result });
+    } catch (error) {
+      console.error("⛔️ Error during selector wait or evaluation:", error);
+      await browser.close();
+      res.status(500).json({ error: error.message });
+    }
   } catch (error) {
     console.error(error);
     await browser.close();
     res.status(500).json({ error: error.message });
   }
 });
-
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

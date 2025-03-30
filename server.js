@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const cors = require('cors');
 const puppeteer = require('puppeteer');
@@ -38,7 +37,6 @@ const regionsDict = {
 app.use(cors());
 app.use(express.json());
 
-// Додаємо простий тестовий маршрут
 app.post('/check', async (req, res) => {
   const { plate, region } = req.body;
   if (!plate || !region) {
@@ -53,8 +51,8 @@ app.post('/check', async (req, res) => {
   try {
     const page = await browser.newPage();
     await page.goto('https://opendata.hsc.gov.ua/check-leisure-license-plates/', {
-      waitUntil: 'networkidle2',
-      timeout: 15000
+      waitUntil: 'networkidle0',
+      timeout: 60000
     });
 
     await page.waitForSelector('select#region', { timeout: 10000 });

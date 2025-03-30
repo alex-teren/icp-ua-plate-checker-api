@@ -40,61 +40,45 @@ app.use(express.json());
 
 // Додаємо простий тестовий маршрут
 app.post('/check', async (req, res) => {
-  console.log('Received body:', req.body);
-  const { plate } = req.body;
-  if (!plate) return res.status(400).json({ error: 'Plate number required' });
-
-  const browser = await puppeteer.launch({ headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu'
-    ]
-  });
-  const page = await browser.newPage();
-
-  await page.goto('https://opendata.hsc.gov.ua/check-leisure-license-plates/', {
-    waitUntil: 'networkidle2',
-    timeout: 60000
-  });
-
-  let results = [];
-
-  for (let i = 1; i <= 26; i++) {
-    // Wait for the region selector to be available
-    await page.waitForSelector("select#region", { timeout: 10000 });
-
-    await page.select("select#region", i.toString());
-    await page.select("select#type_venichle", "light_car_and_truck");
-
-    await page.click("input#number", { clickCount: 3 });
-    await page.keyboard.press("Backspace");
-
-    await page.type("input#number", plate);
-    await page.click('input[type="submit"][value="ПЕРЕГЛЯНУТИ"]');
-
-    await page.waitForSelector("#exampleTable td:first-child", { timeout: 60000 });
-
-    try {
-      const result = await page.$eval("#exampleTable td:first-child", el => el.textContent.trim());
-      if (result.includes(plate)) {
-        results.push({ region: regionsDict[i], status: "available", message: `Номер ${plate} доступний` });
-      } else {
-        results.push({ region: regionsDict[i], status: "unavailable", message: `Номер ${plate} НЕ доступний` });
-      }
-    } catch (error) {
-      await browser.close();
-      console.error('Selector "#exampleTable td:first-child" not found:', error);
-      return res.status(500).json({ error: 'Table did not load in time.' });
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 300));
-    await page.goBack();
+  const { plate, region } = req.body;
+  if (!plate || !region) {
+    return res.status(400).json({ error: 'Plate number and region required' });
   }
 
-  await browser.close();
-  res.json(results);
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.goto('https://opendata.hsc.gov.ua/check-leisure-license-plates/', {
+      waitUntil: 'networkidle2',
+      timeout: 15000
+    });
+
+    await page.waitForSelector('select#region', { timeout: 10000 });
+
+    await page.select('select#region', region.toString());
+    await page.select('select#type_venichle', 'light_car_and_truck');
+
+    await page.click('input#number', { clickCount: 3 });
+    await page.keyboard.press('Backspace');
+    await page.type('input#number', plate);
+    await page.click('input[type="submit"][value="ПЕРЕГЛЯНУТИ"]');
+
+    await page.waitForSelector('#exampleTable td:first-child', { timeout: 15000 });
+    const result = await page.$eval("#exampleTable td:first-child", el => el.textContent.trim());
+
+    await browser.close();
+
+    res.json({ region, result });
+  } catch (error) {
+    console.error(error);
+    await browser.close();
+    res.status(500).json({ error: error.message });
+  }
 });
+
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

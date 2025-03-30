@@ -35,6 +35,10 @@ const regionsDict = {
   26: "м. Київ",
 };
 
+app.use(cors());
+app.use(express.json());
+
+// Додаємо простий тестовий маршрут
 app.post('/check', async (req, res) => {
   console.log('Received body:', req.body);
   const { plate } = req.body;
@@ -47,7 +51,7 @@ app.post('/check', async (req, res) => {
 
   let results = [];
 
-  for (let i = 1; i <= 25; i++) {
+  for (let i = 1; i <= 26; i++) {
     await page.select("select#region", i.toString());
     await page.select("select#type_venichle", "light_car_and_truck");
 
@@ -70,7 +74,7 @@ app.post('/check', async (req, res) => {
       results.push({ region: regionsDict[i], status: "error", message: `Помилка: ${error.message}` });
     }
 
-    await page.waitForTimeout(300);
+    await new Promise(resolve => setTimeout(resolve, 300));
     await page.goBack();
   }
 
